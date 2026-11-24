@@ -68,8 +68,8 @@ export class App {
     document.title = this.isLabMode ? 'Urban Hero | PLAN AI VFX Lab' : 'PLAN AI - Urban Resilience Lab';
 
     if (!this.isLabMode) {
-      settings.camera.distance = 20;
-      settings.camera.maxDistance = 38;
+      settings.camera.distance = Math.max(20, Math.min(36, 20 * window.innerHeight / window.innerWidth));
+      settings.camera.maxDistance = 44;
       settings.camera.targetHeight = 0.9;
       settings.camera.autoFrame = 0.5;
       settings.post.bloomStrength = 0.1;
@@ -207,8 +207,10 @@ export class App {
       this.rig.resize(width, height);
       this.post.setSize(width, height, pixelRatio);
       this.dust.setPixelRatio(pixelRatio);
-      if (this.playground && this.playground.preset !== 'empty') {
+      if (this.isLabMode && this.playground && this.playground.preset !== 'empty') {
         settings.camera.distance = Math.max(22, Math.min(48, 20 * height / width));
+      } else if (!this.isLabMode) {
+        settings.camera.distance = Math.max(20, Math.min(36, 20 * height / width));
       }
     });
 

@@ -21,6 +21,7 @@ export class InputManager extends EventEmitter {
     this.pointer = new Vector2(); // NDC
     this.keys = new Set();
     this.enabled = true;
+    this._gesture = null;
 
     this._bind();
   }
@@ -28,6 +29,8 @@ export class InputManager extends EventEmitter {
   _bind() {
     this.dom.addEventListener('pointerdown', this._onPointerDown);
     window.addEventListener('pointermove', this._onPointerMove);
+    window.addEventListener('pointerup', this._onPointerUp);
+    window.addEventListener('pointercancel', this._onPointerCancel);
     window.addEventListener('keydown', this._onKeyDown);
     window.addEventListener('keyup', this._onKeyUp);
     this.dom.addEventListener('contextmenu', this._onContextMenu);
@@ -49,7 +52,12 @@ export class InputManager extends EventEmitter {
     this._updatePointer(event);
 
     if (event.button === 0) {
-      this.emit('pointer:confirm', this.pointer);
+      this._gesture = {
+        id: event.pointerId,
+        x: event.clientX,
+        y: event.clientY,
+        moved: false
+      };
     } else if (event.button === 2) {
       // Right button also orbits (OrbitControls owns the drag); putting an armed
       // cast away on the same press is the convention players expect.
@@ -57,8 +65,31 @@ export class InputManager extends EventEmitter {
     }
   };
 
+  _onPointerUp = (event) => {
+    const gesture = this._gesture;
+    if (!gesture || gesture.id !== event.pointerId) return;
+
+    this._updatePointer(event);
+    this._gesture = null;
+
+    // A tap confirms an armed cast. A drag belongs to OrbitControls, which
+    // handles one-finger touch orbiting without spending the ability.
+    if (!gesture.moved && event.button === 0) {
+      this.emit('pointer:confirm', this.pointer);
+    }
+  };
+
+  _onPointerCancel = (event) => {
+    if (this._gesture?.id === event.pointerId) this._gesture = null;
+  };
+
   _onPointerMove = (event) => {
     this._updatePointer(event);
+    if (this._gesture?.id === event.pointerId) {
+      const dx = event.clientX - this._gesture.x;
+      const dy = event.clientY - this._gesture.y;
+      this._gesture.moved = this._gesture.moved || dx * dx + dy * dy > 64;
+    }
     this.emit('pointer:move', this.pointer);
   };
 
@@ -122,6 +153,8 @@ export class InputManager extends EventEmitter {
   dispose() {
     this.dom.removeEventListener('pointerdown', this._onPointerDown);
     window.removeEventListener('pointermove', this._onPointerMove);
+    window.removeEventListener('pointerup', this._onPointerUp);
+    window.removeEventListener('pointercancel', this._onPointerCancel);
     window.removeEventListener('keydown', this._onKeyDown);
     window.removeEventListener('keyup', this._onKeyUp);
     this.dom.removeEventListener('contextmenu', this._onContextMenu);

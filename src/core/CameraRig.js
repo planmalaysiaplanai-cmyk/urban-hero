@@ -39,7 +39,9 @@ export class CameraRig {
 
     // Free the left button for path drawing.
     this.controls.mouseButtons = { LEFT: null, MIDDLE: null, RIGHT: MOUSE.ROTATE };
-    this.controls.touches = { ONE: null, TWO: TOUCH.DOLLY_ROTATE };
+    // Touch is the mobile equivalent of right-drag: one finger orbits, while
+    // two fingers orbit and dolly without competing with tap-to-cast input.
+    this.controls.touches = { ONE: TOUCH.ROTATE, TWO: TOUCH.DOLLY_ROTATE };
 
     this.anchor = new Vector3(0, 0, 0); // the character
     this.focus = new Vector3(0, 0, 0); // point of interest (ability head)
