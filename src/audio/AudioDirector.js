@@ -1,4 +1,16 @@
-/** Small synthesized soundtrack: no downloads, autoplay requests, or licensed files. */
+const SAMPLE_FILES = {
+  iceCast: 'forceField_000.ogg', thunderCast: 'laserRetro_000.ogg',
+  meteorCast: 'thrusterFire_000.ogg', beamCast: 'laserLarge_000.ogg',
+  snareCast: 'laserSmall_001.ogg', glacierCast: 'forceField_003.ogg',
+  iceImpact: 'impactGlass_heavy_000.ogg', thunderImpact: 'explosionCrunch_001.ogg',
+  meteorImpact: 'lowFrequency_explosion_000.ogg', meteorCrackle: 'explosionCrunch_003.ogg',
+  beamImpact: 'impactMetal_000.ogg', snareImpact: 'impactMetal_002.ogg',
+  glacierImpact: 'impactGlass_heavy_001.ogg',
+  buildingHit: 'impactMining_000.ogg', buildingCollapse: 'impactPunch_heavy_000.ogg',
+  treeCollapse: 'impactWood_heavy_000.ogg'
+};
+
+/** CC0 sample-led effects with a quiet procedural soundtrack and travel layer. */
 export class AudioDirector {
   constructor() {
     this.enabled = true;
@@ -6,12 +18,19 @@ export class AudioDirector {
     this.musicTimer = null;
     this.chord = 0;
     this.lastTargetSound = 0;
+    this.samples = new Map();
+    this.downloads = new Map(Object.entries(SAMPLE_FILES).map(([name, file]) => [
+      name,
+      fetch(`${import.meta.env.BASE_URL}audio/${file}`)
+        .then((response) => response.ok ? response.arrayBuffer() : null)
+        .catch(() => null)
+    ]));
     this._unlock = () => this.unlock();
     this._visibility = () => {
       if (document.hidden) this.context?.suspend();
       else if (this.enabled) this.context?.resume();
     };
-    document.addEventListener('pointerdown', this._unlock, { once: true });
+    document.addEventListener('pointerdown', this._unlock, { once: true, capture: true });
     document.addEventListener('keydown', this._unlock, { once: true });
     document.addEventListener('visibilitychange', this._visibility);
   }
@@ -28,6 +47,11 @@ export class AudioDirector {
     this.music.gain.value = 0.24;
     this.music.connect(this.master);
     this.context.resume();
+    for (const [name, download] of this.downloads) {
+      download.then((data) => data && this.context?.decodeAudioData(data))
+        .then((buffer) => { if (buffer) this.samples.set(name, buffer); })
+        .catch(() => {});
+    }
     this._musicPhrase();
     this.musicTimer = window.setInterval(() => this._musicPhrase(), 4800);
   }
@@ -83,8 +107,28 @@ export class AudioDirector {
     source.onended = () => { source.disconnect(); filter.disconnect(); gain.disconnect(); };
   }
 
+  _sample(name, volume = 0.45, rate = 1, maxDuration = 1.5) {
+    const buffer = this.samples.get(name);
+    if (!buffer || !this.context || !this.enabled) return false;
+    const source = this.context.createBufferSource();
+    const gain = this.context.createGain();
+    source.buffer = buffer;
+    source.playbackRate.value = rate;
+    const now = this.context.currentTime;
+    const duration = Math.min(buffer.duration / rate, maxDuration);
+    gain.gain.setValueAtTime(volume, now);
+    gain.gain.setValueAtTime(volume, now + Math.max(0, duration - 0.08));
+    gain.gain.linearRampToValueAtTime(0, now + duration);
+    source.connect(gain).connect(this.master);
+    source.start(now);
+    source.stop(now + duration);
+    source.onended = () => { source.disconnect(); gain.disconnect(); };
+    return true;
+  }
+
   cast(element) {
     if (!this.context || !this.enabled) return;
+    if (this._sample(`${element}Cast`, element === 'meteor' ? 0.32 : 0.42, 1, 0.7)) return;
     switch (element) {
       case 'ice':
         this._tone({ wave: 'sine', from: 520, to: 1120, duration: 0.18, volume: 0.1 });
@@ -144,6 +188,10 @@ export class AudioDirector {
 
   powerImpact(element) {
     if (!this.context || !this.enabled) return;
+    if (this._sample(`${element}Impact`, element === 'meteor' ? 0.58 : 0.48)) {
+      if (element === 'meteor') this._sample('meteorCrackle', 0.32);
+      return;
+    }
     switch (element) {
       case 'ice':
         this._noise(0.42, 0.16, 6600, 1800);
@@ -179,6 +227,11 @@ export class AudioDirector {
     if (now - this.lastTargetSound < (destroyed ? 120 : 180)) return;
     this.lastTargetSound = now;
     if (destroyed) {
+      if (this._sample(kind === 'tree' ? 'treeCollapse' : 'buildingCollapse', 0.42, kind === 'tree' ? 0.85 : 0.72)) return;
+    } else if (this._sample('buildingHit', frozen ? 0.26 : 0.18, frozen ? 1.2 : 0.9)) {
+      return;
+    }
+    if (destroyed) {
       const tree = kind === 'tree';
       this._noise(tree ? 0.62 : 0.9, tree ? 0.16 : 0.23, tree ? 1700 : 1100, tree ? 180 : 110);
       this._tone({ wave: 'triangle', from: tree ? 145 : 100, to: 34, duration: tree ? 0.55 : 0.82, volume: tree ? 0.17 : 0.25 });
@@ -200,7 +253,7 @@ export class AudioDirector {
   }
 
   dispose() {
-    document.removeEventListener('pointerdown', this._unlock);
+    document.removeEventListener('pointerdown', this._unlock, true);
     document.removeEventListener('keydown', this._unlock);
     document.removeEventListener('visibilitychange', this._visibility);
     window.clearInterval(this.musicTimer);
