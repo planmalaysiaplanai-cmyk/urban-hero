@@ -34,11 +34,12 @@ export class MissionControl extends EventEmitter {
           <a href="?scenario=flood" data-short="02" class="${config.id === 'flood' ? 'is-active' : ''}">02 Flood</a>
           <a href="?scenario=heat" data-short="03" class="${config.id === 'heat' ? 'is-active' : ''}">03 Heat</a>
           <a href="?scenario=wildfire" data-short="04" class="${config.id === 'wildfire' ? 'is-active' : ''}">04 Fire</a>
-          <a href="?lab=1">VFX Lab</a>
+          <a href="?lab=1" data-short="VFX">VFX Lab</a>
         </nav>
       </header>
 
       <aside class="mission-panel mission-panel--brief">
+        <button class="panel-minimize" type="button" aria-label="Minimize mission panel" aria-expanded="true">−</button>
         <p class="eyebrow">Mission ${config.number} / ${config.category}</p>
         <h1>${config.title}<br><em>${config.accentTitle}</em></h1>
         <p class="mission-copy">${config.summary}</p>
@@ -57,6 +58,7 @@ export class MissionControl extends EventEmitter {
       </aside>
 
       <aside class="mission-panel mission-panel--plan" data-plan-panel>
+        <button class="panel-minimize" type="button" aria-label="Minimize strategy panel" aria-expanded="true">−</button>
         <div class="panel-heading">
           <div><p class="eyebrow">PLAN AI / Strategy</p><h2 data-strategy>Awaiting analysis</h2></div>
           <span class="confidence" data-confidence>--</span>
@@ -126,6 +128,16 @@ export class MissionControl extends EventEmitter {
     `;
 
     this.primary = root.querySelector('[data-action="primary"]');
+    this.panelMinimizers = [...root.querySelectorAll('.panel-minimize')];
+    this.panelMinimizers.forEach((button) => {
+      button.addEventListener('click', () => {
+        const panel = button.closest('.mission-panel');
+        const collapsed = panel.classList.toggle('is-collapsed');
+        button.textContent = collapsed ? '+' : '−';
+        button.setAttribute('aria-expanded', String(!collapsed));
+        button.setAttribute('aria-label', `${collapsed ? 'Expand' : 'Minimize'} ${panel.classList.contains('mission-panel--plan') ? 'strategy' : 'mission'} panel`);
+      });
+    });
     this.primaryLabel = root.querySelector('[data-primary-label]');
     this.planPanel = root.querySelector('[data-plan-panel]');
     this.planSteps = root.querySelector('[data-plan-steps]');

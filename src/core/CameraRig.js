@@ -58,7 +58,16 @@ export class CameraRig {
 
     this.domElement = domElement;
     this._onWheel = this._onWheel.bind(this);
+    this._touchPoints = new Map();
+    this._pinchStart = null;
+    this._onTouchPointerDown = this._onTouchPointerDown.bind(this);
+    this._onTouchPointerMove = this._onTouchPointerMove.bind(this);
+    this._onTouchPointerUp = this._onTouchPointerUp.bind(this);
     domElement.addEventListener('wheel', this._onWheel, { passive: false });
+    domElement.addEventListener('pointerdown', this._onTouchPointerDown);
+    window.addEventListener('pointermove', this._onTouchPointerMove);
+    window.addEventListener('pointerup', this._onTouchPointerUp);
+    window.addEventListener('pointercancel', this._onTouchPointerUp);
   }
 
   /** Wheel zoom. Multiplicative, so each notch feels the same at any distance. */
@@ -75,6 +84,48 @@ export class CameraRig {
       cam.minDistance,
       cam.maxDistance
     );
+  }
+
+  _onTouchPointerDown(event) {
+    if (event.pointerType !== 'touch') return;
+    this._touchPoints.set(event.pointerId, { x: event.clientX, y: event.clientY });
+    if (this._touchPoints.size === 2) {
+      this._pinchStart = {
+        distance: this._touchDistance(),
+        cameraDistance: settings.camera.distance
+      };
+    }
+  }
+
+  _onTouchPointerMove(event) {
+    const point = this._touchPoints.get(event.pointerId);
+    if (!point) return;
+    point.x = event.clientX;
+    point.y = event.clientY;
+    if (!this._pinchStart || this._touchPoints.size < 2) return;
+
+    const distance = Math.max(1, this._touchDistance());
+    const cam = settings.camera;
+    // Fingers moving apart zoom in; moving together zooms out.
+    cam.distance = clamp(
+      this._pinchStart.cameraDistance * this._pinchStart.distance / distance,
+      cam.minDistance,
+      cam.maxDistance
+    );
+  }
+
+  _onTouchPointerUp(event) {
+    if (event.pointerType !== 'touch') return;
+    this._touchPoints.delete(event.pointerId);
+    this._pinchStart = this._touchPoints.size === 2
+      ? { distance: this._touchDistance(), cameraDistance: settings.camera.distance }
+      : null;
+  }
+
+  _touchDistance() {
+    const points = [...this._touchPoints.values()];
+    if (points.length < 2) return 0;
+    return Math.hypot(points[0].x - points[1].x, points[0].y - points[1].y);
   }
 
   /** Point the rig should orbit around (character position). */
@@ -135,6 +186,10 @@ export class CameraRig {
 
   dispose() {
     this.domElement.removeEventListener('wheel', this._onWheel);
+    this.domElement.removeEventListener('pointerdown', this._onTouchPointerDown);
+    window.removeEventListener('pointermove', this._onTouchPointerMove);
+    window.removeEventListener('pointerup', this._onTouchPointerUp);
+    window.removeEventListener('pointercancel', this._onTouchPointerUp);
     this.controls.dispose();
   }
 }
