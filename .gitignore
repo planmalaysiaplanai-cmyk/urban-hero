@@ -141,3 +141,5 @@ dist
 # Local browser automation artifacts and visual test output
 .playwright-cli/
 output/playwright/
+
+.vercel
