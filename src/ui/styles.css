@@ -1478,6 +1478,44 @@ body {
   pointer-events: auto;
 }
 
+.hud__playground-header,
+.hud__playground-tools {
+  display: flex;
+  align-items: center;
+}
+
+.hud__playground-header {
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 30px;
+}
+
+.hud__playground-header strong {
+  color: var(--plan-cyan);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.hud__playground-tools { gap: 5px; flex: none; }
+
+.hud__playground .hud__playground-tools button {
+  min-height: 30px;
+  padding: 0 8px;
+  white-space: nowrap;
+}
+
+.hud__playground .hud__playground-tools [data-playground-collapse] {
+  width: 32px;
+  padding: 0;
+  font-size: 18px;
+}
+
+.hud__playground.is-collapsed .hud__playground-body { display: none; }
+
+.hud__playground-body { margin-top: 10px; }
+
 .hud__playground-kicker {
   margin: 0 0 12px;
   color: var(--plan-cyan);
@@ -1709,6 +1747,8 @@ body {
     width: auto;
     padding: 12px;
   }
+
+  .hud__playground-header strong { font-size: 8px; }
 
   .hud__playground-kicker,
   .hud__playground-tip {

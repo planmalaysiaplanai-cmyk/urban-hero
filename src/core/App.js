@@ -37,6 +37,7 @@ import { RisingTideScenario } from '../scenarios/RisingTideScenario.js';
 import { HeatlockScenario } from '../scenarios/HeatlockScenario.js';
 import { EmberProtocolScenario } from '../scenarios/EmberProtocolScenario.js';
 import { getScenarioConfig } from '../scenarios/catalog.js';
+import { AudioDirector } from '../audio/AudioDirector.js';
 
 import { settings, ELEMENTS } from '../config/settings.js';
 
@@ -157,14 +158,19 @@ export class App {
 
     if (this.isLabMode) {
       this.editor.toggle();
+      this.audio = new AudioDirector();
       this.playground = new DestructiblePlayground({
         onChange: (state) => this.hud.updatePlayground(state),
-        onHit: (hit) => this.hud.showPlaygroundHit(hit)
+        onHit: (hit) => {
+          this.hud.showPlaygroundHit(hit);
+          this.audio.impact(hit);
+        }
       });
       this.scene.add(this.playground.group);
       this.hud.onPlaygroundPreset = (preset) => this.resetLabTargets(preset);
       this.hud.onPlaygroundReset = () => this.resetLabTargets();
       this.hud.onEditorToggle = () => this.editor.toggle();
+      this.hud.onAudioToggle = () => this.hud.setAudioEnabled(this.audio.setEnabled(!this.audio.enabled));
     }
 
     if (!this.isLabMode) {
@@ -287,6 +293,7 @@ export class App {
   _cast(origin, direction, distance) {
     const element = this.element;
     const ability = this.abilities.cast(origin, direction, distance, element);
+    if (ability) this.audio?.cast(element);
     this.playground?.trackCast(ability);
     this.cooldowns.set(element, Math.max(0, settings[element].cooldown));
 
@@ -493,6 +500,7 @@ export class App {
     this.ground.dispose();
     this.city?.dispose();
     this.playground?.dispose();
+    this.audio?.dispose();
     this.dust.dispose();
     this.contactShadows.dispose();
     this.post.dispose();

@@ -18,6 +18,7 @@ export class HUD {
     this.onPlaygroundPreset = null;
     this.onPlaygroundReset = null;
     this.onEditorToggle = null;
+    this.onAudioToggle = null;
     this._toastTimer = 0;
     this._statsAccumulator = 0;
     this._frames = 0;
@@ -41,7 +42,14 @@ export class HUD {
       </nav>
 
       <section class="hud__playground" aria-label="Urban Hero training arena">
-        <p class="hud__playground-kicker">Urban Hero / Training grounds</p>
+        <div class="hud__playground-header">
+          <strong>Urban Hero / Training grounds</strong>
+          <div class="hud__playground-tools">
+            <button type="button" data-audio-toggle aria-label="Mute audio" aria-pressed="true">Sound on</button>
+            <button type="button" data-playground-collapse aria-label="Minimize arena menu" aria-expanded="true">−</button>
+          </div>
+        </div>
+        <div class="hud__playground-body">
         <label for="playground-preset">Choose your arena</label>
         <select id="playground-preset" data-playground-preset>
           <option value="city">Demolition District</option>
@@ -54,6 +62,7 @@ export class HUD {
         <p class="hud__playground-tip">Pick a power, aim at a target and click. Freeze first, then shatter for 1.5x damage.</p>
         <div class="hud__playground-actions"><button type="button" data-playground-reset>Reset targets</button><button type="button" data-playground-editor>VFX editor / G</button></div>
         <output data-playground-feedback aria-live="polite">Training props only / no civilians</output>
+        </div>
       </section>
 
       <div class="hud__panel hud__stats">
@@ -100,6 +109,13 @@ export class HUD {
       event.stopPropagation();
     });
     root.querySelector('.hud__playground').addEventListener('pointerdown', (event) => event.stopPropagation());
+    root.querySelector('[data-playground-collapse]').addEventListener('click', (event) => {
+      const collapsed = root.querySelector('.hud__playground').classList.toggle('is-collapsed');
+      event.currentTarget.textContent = collapsed ? '+' : '−';
+      event.currentTarget.setAttribute('aria-expanded', String(!collapsed));
+      event.currentTarget.setAttribute('aria-label', collapsed ? 'Expand arena menu' : 'Minimize arena menu');
+    });
+    root.querySelector('[data-audio-toggle]').addEventListener('click', () => this.onAudioToggle?.());
     root.querySelector('[data-playground-preset]').addEventListener('change', (event) => this.onPlaygroundPreset?.(event.target.value));
     root.querySelector('[data-playground-reset]').addEventListener('click', () => this.onPlaygroundReset?.());
     root.querySelector('[data-playground-editor]').addEventListener('click', () => this.onEditorToggle?.());
@@ -138,6 +154,13 @@ export class HUD {
     const cleared = this.root.querySelector('[data-playground-cleared]').textContent.split(' / ');
     if (cleared[0] === cleared[1]) return;
     this.root.querySelector('[data-playground-feedback]').textContent = `${ELEMENT_META[hit.element].label} / ${hit.damage} damage / ${hit.destroyed ? 'Target cleared' : hit.frozen ? 'Frozen: follow up to shatter' : 'Target damaged'}`;
+  }
+
+  setAudioEnabled(enabled) {
+    const button = this.root.querySelector('[data-audio-toggle]');
+    button.textContent = enabled ? 'Sound on' : 'Sound off';
+    button.setAttribute('aria-label', enabled ? 'Mute audio' : 'Enable audio');
+    button.setAttribute('aria-pressed', String(enabled));
   }
 
   /** @param {{silent?: boolean}} [options] */
