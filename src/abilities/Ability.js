@@ -170,12 +170,14 @@ export class Ability {
     this.fadeTime = 0;
     this.lightBoost = 0;
     this.phase = AbilityPhase.TRAVEL;
+    this._travelSoundPlayed = false;
 
     this.position.copy(this.origin);
     this.light = this.ctx.lights.acquire();
 
     this.group.visible = true;
     this.onSpawn();
+    this.ctx.audio?.cast(this.element);
   }
 
   /** A point on the cast line. `s` is 0..1 along it. */
@@ -211,12 +213,17 @@ export class Ability {
     switch (this.phase) {
       case AbilityPhase.TRAVEL: {
         const reachedEnd = this.advance(dt);
+        if (!this._travelSoundPlayed && this.u >= 0.08) {
+          this._travelSoundPlayed = true;
+          this.ctx.audio?.travel(this.element);
+        }
         this.onTravel(dt);
         this._updateLight(dt, 1);
         if (reachedEnd) {
           this.phase = AbilityPhase.IMPACT;
           this.impactTime = 0;
           this.onImpact();
+          this.ctx.audio?.powerImpact(this.element);
         }
         break;
       }

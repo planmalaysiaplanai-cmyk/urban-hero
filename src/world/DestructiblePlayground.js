@@ -196,7 +196,7 @@ export class DestructiblePlayground {
       });
     }
     this._notify();
-    this.onHit({ element, damage: Math.round(result.damage), destroyed: result.destroyed, frozen: target.frozen });
+    this.onHit({ element, kind: target.kind, damage: Math.round(result.damage), destroyed: result.destroyed, frozen: target.frozen });
   }
 
   _notify() { this.onChange({ ...this.stats, total: this.targets.length, preset: this.preset, ...PLAYGROUND_PRESETS[this.preset] }); }

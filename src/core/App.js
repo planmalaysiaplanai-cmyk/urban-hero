@@ -121,6 +121,7 @@ export class App {
     this.bursts = new BurstSystem(this.scene);
     this.shake = new CameraShake(this.rig);
     this.flash = new ScreenFlash();
+    this.audio = this.isLabMode ? new AudioDirector() : null;
 
     this.abilities = new AbilityManager({
       scene: this.scene,
@@ -132,7 +133,8 @@ export class App {
       fissures: this.fissures,
       bursts: this.bursts,
       shake: this.shake,
-      flash: this.flash
+      flash: this.flash,
+      audio: this.audio
     });
 
     /* ---- character ---- */
@@ -158,12 +160,11 @@ export class App {
 
     if (this.isLabMode) {
       this.editor.toggle();
-      this.audio = new AudioDirector();
       this.playground = new DestructiblePlayground({
         onChange: (state) => this.hud.updatePlayground(state),
         onHit: (hit) => {
           this.hud.showPlaygroundHit(hit);
-          this.audio.impact(hit);
+          this.audio.targetHit(hit);
         }
       });
       this.scene.add(this.playground.group);
@@ -293,7 +294,6 @@ export class App {
   _cast(origin, direction, distance) {
     const element = this.element;
     const ability = this.abilities.cast(origin, direction, distance, element);
-    if (ability) this.audio?.cast(element);
     this.playground?.trackCast(ability);
     this.cooldowns.set(element, Math.max(0, settings[element].cooldown));
 

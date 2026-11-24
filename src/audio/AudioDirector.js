@@ -1,12 +1,3 @@
-const POWER_VOICES = {
-  ice: { wave: 'triangle', from: 920, to: 240, duration: 0.38, noise: 0.08 },
-  thunder: { wave: 'sawtooth', from: 125, to: 58, duration: 0.58, noise: 0.2 },
-  meteor: { wave: 'sawtooth', from: 340, to: 42, duration: 0.75, noise: 0.26 },
-  beam: { wave: 'sine', from: 180, to: 850, duration: 0.62, noise: 0.07 },
-  snare: { wave: 'square', from: 600, to: 95, duration: 0.48, noise: 0.12 },
-  glacier: { wave: 'triangle', from: 460, to: 115, duration: 0.9, noise: 0.16 }
-};
-
 /** Small synthesized soundtrack: no downloads, autoplay requests, or licensed files. */
 export class AudioDirector {
   constructor() {
@@ -14,6 +5,7 @@ export class AudioDirector {
     this.context = null;
     this.musicTimer = null;
     this.chord = 0;
+    this.lastTargetSound = 0;
     this._unlock = () => this.unlock();
     this._visibility = () => {
       if (document.hidden) this.context?.suspend();
@@ -68,7 +60,7 @@ export class AudioDirector {
     oscillator.onended = () => { oscillator.disconnect(); gain.disconnect(); };
   }
 
-  _noise(duration, volume, cutoff = 1200) {
+  _noise(duration, volume, cutoff = 1200, endCutoff = cutoff, delay = 0) {
     if (!this.context || !this.enabled) return;
     const context = this.context;
     const samples = Math.ceil(context.sampleRate * duration);
@@ -80,27 +72,121 @@ export class AudioDirector {
     const gain = context.createGain();
     source.buffer = buffer;
     filter.type = 'lowpass';
-    filter.frequency.value = cutoff;
-    gain.gain.setValueAtTime(volume, context.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.0001, context.currentTime + duration);
+    const now = context.currentTime + delay;
+    filter.frequency.setValueAtTime(cutoff, now);
+    filter.frequency.exponentialRampToValueAtTime(Math.max(40, endCutoff), now + duration);
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.exponentialRampToValueAtTime(Math.max(0.001, volume), now + Math.min(0.025, duration * 0.2));
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
     source.connect(filter).connect(gain).connect(this.master);
-    source.start();
+    source.start(now);
     source.onended = () => { source.disconnect(); filter.disconnect(); gain.disconnect(); };
   }
 
   cast(element) {
-    const voice = POWER_VOICES[element];
-    if (!voice || !this.enabled) return;
-    this._tone({ ...voice, volume: 0.18 });
-    this._tone({ ...voice, from: voice.from * 1.51, to: voice.to * 1.2, volume: 0.055, delay: 0.06 });
-    this._noise(voice.duration * 0.7, voice.noise, element === 'ice' || element === 'glacier' ? 3200 : 900);
+    if (!this.context || !this.enabled) return;
+    switch (element) {
+      case 'ice':
+        this._tone({ wave: 'sine', from: 520, to: 1120, duration: 0.18, volume: 0.1 });
+        this._tone({ wave: 'triangle', from: 1040, to: 740, duration: 0.28, volume: 0.055, delay: 0.07 });
+        break;
+      case 'thunder':
+        this._noise(0.12, 0.19, 5000, 900);
+        this._tone({ wave: 'sawtooth', from: 180, to: 72, duration: 0.2, volume: 0.11 });
+        break;
+      case 'meteor':
+        this._tone({ wave: 'sawtooth', from: 92, to: 55, duration: 0.38, volume: 0.13 });
+        this._noise(0.3, 0.12, 180, 700);
+        break;
+      case 'beam':
+        this._tone({ wave: 'sine', from: 180, to: 790, duration: 0.4, volume: 0.12 });
+        this._tone({ wave: 'triangle', from: 370, to: 1050, duration: 0.48, volume: 0.06 });
+        break;
+      case 'snare':
+        this._tone({ wave: 'square', from: 280, to: 630, duration: 0.16, volume: 0.075 });
+        this._tone({ wave: 'square', from: 420, to: 190, duration: 0.2, volume: 0.06, delay: 0.13 });
+        break;
+      case 'glacier':
+        this._tone({ wave: 'sine', from: 300, to: 660, duration: 0.36, volume: 0.09 });
+        this._noise(0.32, 0.08, 2200, 4200);
+        break;
+    }
   }
 
-  impact({ destroyed, frozen }) {
-    if (!this.enabled) return;
-    this._tone({ wave: 'triangle', from: destroyed ? 115 : 210, to: destroyed ? 38 : 75, duration: destroyed ? 0.8 : 0.27, volume: destroyed ? 0.3 : 0.12 });
-    this._noise(destroyed ? 0.85 : 0.22, destroyed ? 0.22 : 0.08, frozen ? 3500 : 650);
-    if (destroyed) this._tone({ wave: 'sine', from: 560, to: 160, duration: 0.38, volume: 0.07, delay: 0.13 });
+  travel(element) {
+    if (!this.context || !this.enabled) return;
+    switch (element) {
+      case 'ice':
+        this._noise(0.5, 0.065, 3300, 6200);
+        break;
+      case 'thunder':
+        this._noise(0.34, 0.1, 6500, 1600);
+        this._tone({ wave: 'sawtooth', from: 260, to: 540, duration: 0.3, volume: 0.04 });
+        break;
+      case 'meteor':
+        this._noise(0.72, 0.18, 300, 1450);
+        this._tone({ wave: 'sawtooth', from: 125, to: 52, duration: 0.68, volume: 0.12 });
+        break;
+      case 'beam':
+        this._tone({ wave: 'sine', from: 700, to: 890, duration: 0.75, volume: 0.085 });
+        this._noise(0.62, 0.045, 2500, 4500);
+        break;
+      case 'snare':
+        this._noise(0.38, 0.09, 4200, 850);
+        this._tone({ wave: 'square', from: 450, to: 220, duration: 0.32, volume: 0.04 });
+        break;
+      case 'glacier':
+        this._noise(0.85, 0.1, 2100, 5000);
+        this._tone({ wave: 'sine', from: 580, to: 360, duration: 0.8, volume: 0.055 });
+        break;
+    }
+  }
+
+  powerImpact(element) {
+    if (!this.context || !this.enabled) return;
+    switch (element) {
+      case 'ice':
+        this._noise(0.42, 0.16, 6600, 1800);
+        this._tone({ wave: 'triangle', from: 1400, to: 270, duration: 0.35, volume: 0.11 });
+        break;
+      case 'thunder':
+        this._noise(0.58, 0.28, 6500, 450);
+        this._tone({ wave: 'sawtooth', from: 210, to: 45, duration: 0.52, volume: 0.19 });
+        break;
+      case 'meteor':
+        this._noise(0.9, 0.3, 900, 130);
+        this._tone({ wave: 'sawtooth', from: 110, to: 32, duration: 0.8, volume: 0.25 });
+        break;
+      case 'beam':
+        this._tone({ wave: 'sine', from: 1060, to: 210, duration: 0.78, volume: 0.17 });
+        this._noise(0.7, 0.13, 4000, 800);
+        break;
+      case 'snare':
+        this._noise(0.46, 0.21, 5600, 750);
+        this._tone({ wave: 'square', from: 680, to: 90, duration: 0.43, volume: 0.1 });
+        break;
+      case 'glacier':
+        this._noise(0.85, 0.18, 6500, 1100);
+        this._tone({ wave: 'triangle', from: 760, to: 110, duration: 0.77, volume: 0.14 });
+        this._tone({ wave: 'sine', from: 1120, to: 450, duration: 0.64, volume: 0.06, delay: 0.08 });
+        break;
+    }
+  }
+
+  targetHit({ destroyed, frozen, kind }) {
+    if (!this.context || !this.enabled) return;
+    const now = performance.now();
+    if (now - this.lastTargetSound < (destroyed ? 120 : 180)) return;
+    this.lastTargetSound = now;
+    if (destroyed) {
+      const tree = kind === 'tree';
+      this._noise(tree ? 0.62 : 0.9, tree ? 0.16 : 0.23, tree ? 1700 : 1100, tree ? 180 : 110);
+      this._tone({ wave: 'triangle', from: tree ? 145 : 100, to: 34, duration: tree ? 0.55 : 0.82, volume: tree ? 0.17 : 0.25 });
+      this._noise(0.25, 0.085, frozen ? 5400 : 1900, 450, 0.16);
+    } else {
+      this._noise(0.19, frozen ? 0.1 : 0.075, frozen ? 4600 : 1000, 350);
+      this._tone({ wave: 'triangle', from: frozen ? 620 : 180, to: frozen ? 170 : 75, duration: 0.2, volume: 0.07 });
+    }
   }
 
   _musicPhrase() {

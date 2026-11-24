@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { Vector3 } from 'three';
 import { hitsTarget, resolveDamage } from '../src/world/PlaygroundCombat.js';
 import { DestructiblePlayground } from '../src/world/DestructiblePlayground.js';
+import { Ability } from '../src/abilities/Ability.js';
 
 function castAt(target, element = 'meteor') {
   const direction = new Vector3(target.x, 0, target.z);
@@ -86,4 +87,22 @@ test('all six powers can damage training targets, and arenas reset their resourc
   assert.equal(playground.targets.length, 0);
   assert.equal(playground.group.children.length, 0);
   playground.dispose();
+});
+
+test('audio cues follow travel and impact phases instead of firing together on cast', () => {
+  const events = [];
+  const ability = new Ability('ice', {
+    lights: { acquire: () => null },
+    audio: {
+      cast: (element) => events.push(`cast:${element}`),
+      travel: (element) => events.push(`travel:${element}`),
+      powerImpact: (element) => events.push(`impact:${element}`)
+    }
+  });
+  ability.spawn(new Vector3(), new Vector3(0, 0, 1), 20);
+  assert.deepEqual(events, ['cast:ice']);
+  ability.update(0.1);
+  assert.equal(events.includes('impact:ice'), false);
+  for (let i = 0; i < 100 && ability.phase === 'travel'; i++) ability.update(0.1);
+  assert.deepEqual(events, ['cast:ice', 'travel:ice', 'impact:ice']);
 });
