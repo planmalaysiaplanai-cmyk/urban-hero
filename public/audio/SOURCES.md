@@ -8,6 +8,9 @@ Creator/distributor: Kenney (kenney.nl). License: Creative Commons Zero (CC0).
 The original archives each include `License.txt`; CC0 permits use and
 redistribution, including commercial use, without attribution.
 
+Matching `.mp3` files were transcoded from those clips for broader mobile
+browser support; the app loads the MP3 versions.
+
 Impact Sounds: `impactGlass_heavy_000/001`, `impactMining_000`,
 `impactPunch_heavy_000`, `impactWood_heavy_000`.
 

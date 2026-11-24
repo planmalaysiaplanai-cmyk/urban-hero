@@ -45,7 +45,7 @@ export class HUD {
         <div class="hud__playground-header">
           <strong>Urban Hero / Training grounds</strong>
           <div class="hud__playground-tools">
-            <button type="button" data-audio-toggle aria-label="Mute audio" aria-pressed="true">Sound on</button>
+            <button type="button" data-audio-toggle aria-label="Enable sound" aria-pressed="false">Enable sound</button>
             <button type="button" data-playground-collapse aria-label="Minimize arena menu" aria-expanded="true">−</button>
           </div>
         </div>

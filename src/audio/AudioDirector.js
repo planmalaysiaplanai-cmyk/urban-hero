@@ -13,7 +13,7 @@ const SAMPLE_FILES = {
 /** CC0 sample-led effects with a quiet procedural soundtrack and travel layer. */
 export class AudioDirector {
   constructor() {
-    this.enabled = true;
+    this.enabled = false;
     this.context = null;
     this.musicTimer = null;
     this.chord = 0;
@@ -21,17 +21,19 @@ export class AudioDirector {
     this.samples = new Map();
     this.downloads = new Map(Object.entries(SAMPLE_FILES).map(([name, file]) => [
       name,
-      fetch(`${import.meta.env.BASE_URL}audio/${file}`)
+      fetch(`${import.meta.env.BASE_URL}audio/${file.replace('.ogg', '.mp3')}`)
         .then((response) => response.ok ? response.arrayBuffer() : null)
         .catch(() => null)
     ]));
-    this._unlock = () => this.unlock();
+    this._resumeOnGesture = () => {
+      if (this.enabled && this.context?.state !== 'running') this.context?.resume();
+    };
     this._visibility = () => {
       if (document.hidden) this.context?.suspend();
       else if (this.enabled) this.context?.resume();
     };
-    document.addEventListener('pointerdown', this._unlock, { once: true, capture: true });
-    document.addEventListener('keydown', this._unlock, { once: true });
+    document.addEventListener('pointerdown', this._resumeOnGesture, true);
+    document.addEventListener('keydown', this._resumeOnGesture);
     document.addEventListener('visibilitychange', this._visibility);
   }
 
@@ -44,9 +46,11 @@ export class AudioDirector {
     this.master.gain.value = 0.45;
     this.master.connect(this.context.destination);
     this.music = this.context.createGain();
-    this.music.gain.value = 0.24;
+    this.music.gain.value = 0.36;
     this.music.connect(this.master);
     this.context.resume();
+    this._tone({ wave: 'sine', from: 520, to: 780, duration: 0.16, volume: 0.18 });
+    this._tone({ wave: 'sine', from: 780, to: 1040, duration: 0.2, volume: 0.14, delay: 0.12 });
     for (const [name, download] of this.downloads) {
       download.then((data) => data && this.context?.decodeAudioData(data))
         .then((buffer) => { if (buffer) this.samples.set(name, buffer); })
@@ -253,8 +257,8 @@ export class AudioDirector {
   }
 
   dispose() {
-    document.removeEventListener('pointerdown', this._unlock, true);
-    document.removeEventListener('keydown', this._unlock);
+    document.removeEventListener('pointerdown', this._resumeOnGesture, true);
+    document.removeEventListener('keydown', this._resumeOnGesture);
     document.removeEventListener('visibilitychange', this._visibility);
     window.clearInterval(this.musicTimer);
     this.context?.close();

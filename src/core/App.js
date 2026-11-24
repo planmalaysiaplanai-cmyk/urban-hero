@@ -121,7 +121,7 @@ export class App {
     this.bursts = new BurstSystem(this.scene);
     this.shake = new CameraShake(this.rig);
     this.flash = new ScreenFlash();
-    this.audio = this.isLabMode ? new AudioDirector() : null;
+    this.audio = new AudioDirector();
 
     this.abilities = new AbilityManager({
       scene: this.scene,
@@ -181,6 +181,7 @@ export class App {
         document.getElementById('mission-control'),
         this.scenarioConfig
       );
+      this.missionUI.onAudioToggle = () => this.missionUI.setAudioEnabled(this.audio.setEnabled(!this.audio.enabled));
       const scenarios = {
         frozen: FrozenStormScenario,
         flood: RisingTideScenario,

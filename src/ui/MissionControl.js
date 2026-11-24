@@ -39,6 +39,7 @@ export class MissionControl extends EventEmitter {
       </header>
 
       <aside class="mission-panel mission-panel--brief">
+        <button class="mission-audio" type="button" data-mission-audio aria-label="Enable sound" aria-pressed="false">Enable sound</button>
         <button class="panel-minimize" type="button" aria-label="Minimize mission panel" aria-expanded="true">−</button>
         <p class="eyebrow">Mission ${config.number} / ${config.category}</p>
         <h1>${config.title}<br><em>${config.accentTitle}</em></h1>
@@ -128,6 +129,7 @@ export class MissionControl extends EventEmitter {
     `;
 
     this.primary = root.querySelector('[data-action="primary"]');
+    root.querySelector('[data-mission-audio]').addEventListener('click', () => this.onAudioToggle?.());
     this.panelMinimizers = [...root.querySelectorAll('.panel-minimize')];
     this.panelMinimizers.forEach((button) => {
       button.addEventListener('click', () => {
@@ -197,6 +199,13 @@ export class MissionControl extends EventEmitter {
 
     this.setPhase('observe');
     this._renderCountdown();
+  }
+
+  setAudioEnabled(enabled) {
+    const button = this.root.querySelector('[data-mission-audio]');
+    button.textContent = enabled ? 'Sound on' : 'Sound off';
+    button.setAttribute('aria-label', enabled ? 'Mute audio' : 'Enable audio');
+    button.setAttribute('aria-pressed', String(enabled));
   }
 
   setPhase(phase) {

@@ -364,6 +364,34 @@ body {
   outline: none;
 }
 
+.mission-audio {
+  position: absolute;
+  top: 9px;
+  right: 44px;
+  z-index: 2;
+  height: 28px;
+  padding: 0 8px;
+  border: 1px solid rgba(117, 230, 255, 0.25);
+  border-radius: 5px;
+  background: rgba(117, 230, 255, 0.06);
+  color: var(--plan-cyan);
+  font: 600 9px var(--ui-font);
+  cursor: pointer;
+}
+
+.mission-audio:hover,
+.mission-audio:focus-visible {
+  background: rgba(117, 230, 255, 0.18);
+  outline: none;
+}
+
+.mission-audio[aria-pressed="false"],
+.hud__playground-tools [data-audio-toggle][aria-pressed="false"] {
+  border-color: rgba(255, 173, 92, 0.65);
+  color: var(--plan-amber);
+  background: rgba(255, 173, 92, 0.12);
+}
+
 .mission-panel.is-collapsed {
   min-height: 48px;
   max-height: 48px;
@@ -1843,6 +1871,8 @@ body {
     top: 8px;
     right: 8px;
   }
+
+  .mission-audio { top: 5px; right: 43px; height: 36px; }
 
   .mission-panel--plan {
     right: 10px;
